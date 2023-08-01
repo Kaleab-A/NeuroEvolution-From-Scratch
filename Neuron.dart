@@ -9,9 +9,9 @@ List<double> randomInit(List<int> shape) {
 
   for (int i = 0; i < shape[0]; i++) {
     temp = rng.nextDouble();
-    if (rng.nextInt(2) == 0) {
-      temp *= -1;
-    }
+    // if (rng.nextInt(2) == 0) {
+    //   temp *= -1;
+    // }
     result.add(temp);
   }
 
@@ -30,10 +30,13 @@ class Neuron {
   List<Neuron> backwardConnections;
   late List<double> backwardWeights = randomInit([backwardNodes]);
   List<Neuron> forwardConnections;
-  late List<double> forwardWeights = randomInit([forwardNodes]);
   Function activation;
 
   double value;
+  double valueBeforeActivation = 0;
+
+  double error = 0;
+  Function errorFxn = () => 0;
 
   Neuron(
       this.id,
@@ -53,6 +56,7 @@ class Neuron {
         value += backwardConnections[i].value * backwardWeights[i];
       }
 
+      valueBeforeActivation = value;
       value = activation(value);
     }
 
@@ -62,15 +66,44 @@ class Neuron {
       }
     }
 
-    print("$id, $value");
+    // if (isOutput) {
+    //   print("$id $value");
+    // }
 
     return value;
   }
 
-  void backward() {
+  void backward(double expectedValue, double learningRate,
+      [double prevDerivative = 1]) {
+    double dEdh = 1 * prevDerivative;
+    List<double> dEdw = [];
+    List<double> dEdx = [];
+
+    // Calculate derivative of error
+    if (isOutput) {
+      dEdh *= errorFxn(value, expectedValue, true);
+    }
+    dEdh *= activation(valueBeforeActivation, true);
+
+    // Calculate derivative of error with respect to weights
+    for (int i = 0; i < backwardWeights.length; i++) {
+      dEdw.add(dEdh * backwardConnections[i].value * learningRate);
+    }
+
+    // Calculate derivative of error with respect to backward neurons - passed to them for backpropagation
+    for (int i = 0; i < backwardWeights.length; i++) {
+      dEdx.add(dEdh * backwardWeights[i]);
+    }
+
+    // Update weights
+    for (int i = 0; i < backwardWeights.length; i++) {
+      backwardWeights[i] -= dEdw[i];
+    }
+
+    // If not input, continue backpropagation backwards
     if (!isInput) {
       for (int i = 0; i < backwardConnections.length; i++) {
-        backwardConnections[i].backward();
+        backwardConnections[i].backward(expectedValue, learningRate, dEdx[i]);
       }
     }
   }

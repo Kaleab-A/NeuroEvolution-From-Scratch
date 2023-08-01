@@ -17,6 +17,14 @@ class Activation {
     }
   }
 
+  double linear(double x, [bool derivative = false]) {
+    if (!derivative) {
+      return x;
+    } else {
+      return 1;
+    }
+  }
+
   // double tanh(double x) {
   //   return (exp(x) - exp(-x)) / (exp(x) + exp(-x));
   // }

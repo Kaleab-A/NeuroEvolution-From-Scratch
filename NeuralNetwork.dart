@@ -11,6 +11,7 @@ import 'Error.dart';
 //  3  |  7 8  |  11
 // Hidden Node: [[1, 2], [4, 6], [5, 6], [4, 7]] - like directed graph
 
+// TODO Forgot to add bias
 class NeuralNetwork {
   List<int> nodes;
   List<List<int>> connections = [];
@@ -18,26 +19,35 @@ class NeuralNetwork {
   List<Neuron> inputNeurons = [];
   List<Neuron> outputNeurons = [];
 
-  NeuralNetwork(this.nodes, this.connections) {
-    init(this.nodes, this.connections);
+  Function errorFx;
+  List<Function> activationFunctions;
+
+  double learningRate;
+
+  NeuralNetwork(
+      this.nodes, this.connections, this.activationFunctions, this.errorFx,
+      [this.learningRate = 0.01]) {
+    init(this.nodes);
   }
 
-  void init(nodes, connections) {
+  void init(nodes) {
     List<Neuron> neurons = [];
     int cnt = 0;
 
     for (int i = 0; i < nodes.length; i++) {
       for (int j = 0; j < nodes[i]; j++) {
         if (i == 0) {
-          neurons.add(Neuron(cnt, 0, true, false, 0, 0, [], [], (x) => x));
+          neurons.add(Neuron(cnt, 0, true, false, 0, 0, [], [],
+              (x, [derivative = false]) => x));
           inputNeurons.add(neurons[cnt]);
         } else if (i == nodes.length - 1) {
-          neurons.add(
-              Neuron(cnt, 0, false, true, 0, 0, [], [], Activation().sigmoid));
+          print("$activationFunctions , $i");
+          neurons.add(Neuron(
+              cnt, 0, false, true, 0, 0, [], [], activationFunctions[i - 1]));
           outputNeurons.add(neurons[cnt]);
         } else {
-          neurons.add(
-              Neuron(cnt, 0, false, false, 0, 0, [], [], Activation().relu));
+          neurons.add(Neuron(
+              cnt, 0, false, false, 0, 0, [], [], activationFunctions[i - 1]));
         }
         cnt += 1;
       }
@@ -97,32 +107,93 @@ class NeuralNetwork {
     return output;
   }
 
-  List<double> calcError(List<double> expectedOutput, Function errorFx) {
+  List<double> calcError(List<double> expectedOutput) {
     List<double> error = [];
     for (int i = 0; i < outputNeurons.length; i++) {
       error.add(errorFx(outputNeurons[i].value, expectedOutput[i]));
     }
     return error;
   }
+
+  void backward(List<double> expectedOutput) {
+    List<double> errors = calcError(expectedOutput);
+    double avgError = errors.reduce((a, b) => a + b) / errors.length;
+
+    var outputVal = [];
+    for (int i = 0; i < outputNeurons.length; i++) {
+      outputVal.add(outputNeurons[i].value);
+    }
+    print(outputVal);
+    print("Error: $errors, Average Error: $avgError");
+
+    for (int i = 0; i < outputNeurons.length; i++) {
+      outputNeurons[i].error = errors[i];
+      outputNeurons[i].errorFxn = errorFx;
+      outputNeurons[i].backward(expectedOutput[i], learningRate);
+    }
+  }
+
+  void train(List<List<double>> trainX, List<List<double>> trainY, int epochs,
+      int batchSize) {
+    for (int i = 0; i < epochs; i++) {
+      for (int j = 0; j < trainX.length; j += batchSize) {
+        List<List<double>> batchX = trainX.sublist(j, j + batchSize);
+        List<List<double>> batchY = trainY.sublist(j, j + batchSize);
+        for (int k = 0; k < batchX.length; k++) {
+          forward(batchX[k]);
+          backward(batchY[k]);
+        }
+      }
+    }
+  }
 }
 
+// void main() {
+//   var a = NeuralNetwork([
+//     2,
+//     5,
+//     2
+//   ], [
+//     [0, 2],
+//     [1, 2],
+//     [1, 3],
+//     [2, 4],
+//     [3, 4],
+//     [3, 5],
+//     [4, 6],
+//     [5, 7],
+//     [5, 8],
+//     [6, 7],
+//     [6, 8]
+//   ], [
+//     Activation().relu,
+//     Activation().relu,
+//     Activation().relu,
+//     Activation().linear
+//   ], Error().meanSquareError);
+
+//   a.train([
+//     [1, 4]
+//   ], [
+//     [5, 0]
+//   ], 20, 1);
+// }
+
 void main() {
+  // Testing if simple perceptron can predict sum of 2 inputs
   var a = NeuralNetwork([
     2,
-    5,
-    2
+    1
   ], [
     [0, 2],
-    [1, 2],
-    [1, 3],
-    [2, 4],
-    [3, 4],
-    [3, 5],
-    [4, 6],
-    [5, 7],
-    [5, 8],
-    [6, 7],
-    [6, 8]
-  ]);
-  print(a.forward([1, 2]));
+    [1, 2]
+  ], [
+    Activation().linear
+  ], Error().meanSquareError);
+
+  a.train([
+    [1, 5]
+  ], [
+    [5]
+  ], 5, 1);
 }
