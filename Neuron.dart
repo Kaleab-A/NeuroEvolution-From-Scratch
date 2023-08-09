@@ -71,10 +71,6 @@ class Neuron {
       }
     }
 
-    // if (isOutput) {
-    //   print("$id $value");
-    // }
-
     return value;
   }
 

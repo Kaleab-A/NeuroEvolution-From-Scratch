@@ -15,11 +15,13 @@ import 'package:csv/csv.dart';
 
 // TODO Forgot to add bias
 class NeuralNetwork {
+  List<Neuron> neurons = []; // Main and Only with Neuron Object
+
   List<int> nodes;
   List<List<int>> connections = [];
 
-  List<Neuron> inputNeurons = [];
-  List<Neuron> outputNeurons = [];
+  List<int> inputNeuronsID = [];
+  List<int> outputNeuronsID = [];
 
   Function errorFx;
   List<Function> activationFunctions;
@@ -40,7 +42,6 @@ class NeuralNetwork {
   }
 
   void init(nodes) {
-    List<Neuron> neurons = [];
     int cnt = 0;
 
     // Creating Neurons (Input, Hidden, Output)
@@ -49,11 +50,11 @@ class NeuralNetwork {
         if (i == 0) {
           neurons.add(Neuron(cnt, 0, true, false, 0, 0, [], [],
               (x, [derivative = false]) => x));
-          inputNeurons.add(neurons[cnt]);
+          inputNeuronsID.add(cnt);
         } else if (i == nodes.length - 1) {
           neurons.add(Neuron(
               cnt, 0, false, true, 0, 0, [], [], activationFunctions[i - 1]));
-          outputNeurons.add(neurons[cnt]);
+          outputNeuronsID.add(cnt);
         } else {
           neurons.add(Neuron(
               cnt, 0, false, false, 0, 0, [], [], activationFunctions[i - 1]));
@@ -121,15 +122,30 @@ class NeuralNetwork {
     }
   }
 
+  void printWeights() {
+    print("Input Neurons");
+
+    neurons[inputNeuronsID[0]].forwardConnections.forEach((element) {
+      print("${element.backwardWeights}, ${element.backwardBias}");
+    });
+
+    print("Output Neurons");
+    for (int i = 0; i < outputNeuronsID.length; i++) {
+      Neuron outputNeuron = neurons[outputNeuronsID[i]];
+      print("${outputNeuron.backwardWeights}, ${outputNeuron.backwardBias}");
+    }
+  }
+
   List<double> forward(input) {
-    for (int i = 0; i < inputNeurons.length; i++) {
-      inputNeurons[i].value = input[i];
-      inputNeurons[i].forward();
+    print(input);
+    for (int i = 0; i < inputNeuronsID.length; i++) {
+      neurons[inputNeuronsID[i]].value = input[i];
+      neurons[inputNeuronsID[i]].forward();
     }
 
     List<double> output = [];
-    for (int i = 0; i < outputNeurons.length; i++) {
-      output.add(outputNeurons[i].value);
+    for (int i = 0; i < outputNeuronsID.length; i++) {
+      output.add(neurons[outputNeuronsID[i]].value);
     }
 
     return output;
@@ -137,8 +153,8 @@ class NeuralNetwork {
 
   List<double> calcError(List<double> expectedOutput) {
     List<double> error = [];
-    for (int i = 0; i < outputNeurons.length; i++) {
-      error.add(errorFx(outputNeurons[i].value, expectedOutput[i]));
+    for (int i = 0; i < outputNeuronsID.length; i++) {
+      error.add(errorFx(neurons[outputNeuronsID[i]].value, expectedOutput[i]));
     }
     return error;
   }
@@ -149,10 +165,10 @@ class NeuralNetwork {
     double avgError = errors.reduce((a, b) => a + b) / errors.length;
     errorTemp.add(avgError);
 
-    for (int i = 0; i < outputNeurons.length; i++) {
-      outputNeurons[i].error = errors[i];
-      outputNeurons[i].errorFxn = errorFx;
-      outputNeurons[i].backward(expectedOutput[i], learningRate);
+    for (int i = 0; i < outputNeuronsID.length; i++) {
+      neurons[outputNeuronsID[i]].error = errors[i];
+      neurons[outputNeuronsID[i]].errorFxn = errorFx;
+      neurons[outputNeuronsID[i]].backward(expectedOutput[i], learningRate);
     }
   }
 
@@ -172,19 +188,20 @@ class NeuralNetwork {
           backward(batchY[k], j);
         }
       }
+
       // Write the average of the last 4 values in errorTemp to a file
-      double avgtemp = 0;
-      for (int i = 0; i < 4; i++) {
-        avgtemp += errorTemp[errorTemp.length - 1 - i];
-      }
-      avgtemp /= 4;
-      file.writeAsStringSync(avgtemp.toString() + "\n", mode: FileMode.append);
+      // double avgtemp = 0;
+      // for (int i = 0; i < 4; i++) {
+      //   avgtemp += errorTemp[errorTemp.length - 1 - i];
+      // }
+      // avgtemp /= 4;
+      // file.writeAsStringSync(avgtemp.toString() + "\n", mode: FileMode.append);
     }
   }
 }
 
-File file1 = File("NN1.txt");
-File file2 = File("NN2.txt");
+File file1 = File("lib/NN1.txt");
+File file2 = File("lib/NN2.txt");
 
 // void main() {
 //   List<List<double>> trainX = [
@@ -241,55 +258,52 @@ File file2 = File("NN2.txt");
 // }
 
 void main() {
+  List<List<double>> data = [];
   List<List<double>> trainX = [
-    [0, 0],
-    [0, 1],
-    [1, 0],
-    [1, 1]
+    [3, 4]
   ];
   List<List<double>> trainY = [
-    [0],
-    [1],
-    [1],
-    [1]
+    [7]
   ];
+
+  // for (double i = 0; i <= 20; i += 1) {
+  //   data.add([i.toDouble(), (i).toDouble()]);
+  // }
+
+  // // Shuffling the data
+  // data.shuffle();
+
+  // print(data);
+
+  // for (int i = 0; i < data.length; i++) {
+  //   trainX.add([data[i][0]]);
+  //   trainY.add([data[i][1]]);
+  // }
 
   // Testing if simple perceptron can predict sum of 2 inputs
   var a = NeuralNetwork(
       nodes: [
         2,
-        2,
         1
       ],
       connections: [],
       activationFunctions: [
-        Activation().relu,
-        Activation().relu,
+        // Activation().relu,
+        // Activation().relu,
+        Activation().linear,
       ],
       errorFx: Error().meanSquareError,
       fullyConnected: true,
       learningRate: 0.01);
 
-  a.train(
-      trainX: trainX, trainY: trainX, epochs: 100, batchSize: 1, file: file1);
-  // -----------------------------------------------------------------------------------------------------------
-  var b = NeuralNetwork(
-      nodes: [
-        2,
-        16,
-        16,
-        1
-      ],
-      connections: [],
-      activationFunctions: [
-        Activation().relu,
-        Activation().relu,
-        Activation().relu,
-      ],
-      errorFx: Error().meanSquareError,
-      fullyConnected: true,
-      learningRate: 0.01);
+  for (int i = 0; i <= 20; i++) {
+    print("\nEpoch $i Output ${a.forward([3.0, 4.0])}");
+    a.train(
+        trainX: trainX, trainY: trainX, epochs: 1, batchSize: 1, file: file1);
 
-  b.train(
-      trainX: trainX, trainY: trainX, epochs: 100, batchSize: 1, file: file2);
+    a.printWeights();
+  }
 }
+
+
+// TODO: Dry Run [3, 4] --> 7 With given weights
