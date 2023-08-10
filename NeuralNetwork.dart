@@ -123,21 +123,20 @@ class NeuralNetwork {
   }
 
   void printWeights() {
-    print("Input Neurons");
+    // print("Input Neurons");
 
-    neurons[inputNeuronsID[0]].forwardConnections.forEach((element) {
-      print("${element.backwardWeights}, ${element.backwardBias}");
-    });
+    // neurons[inputNeuronsID[0]].forwardConnections.forEach((element) {
+    //   print("${element.backwardWeights}, ${element.backwardBias}");
+    // });
 
     print("Output Neurons");
     for (int i = 0; i < outputNeuronsID.length; i++) {
       Neuron outputNeuron = neurons[outputNeuronsID[i]];
-      print("${outputNeuron.backwardWeights}, ${outputNeuron.backwardBias}");
+      print("${outputNeuron.backwardWeights}, ${outputNeuron.neuronBias}");
     }
   }
 
   List<double> forward(input) {
-    print(input);
     for (int i = 0; i < inputNeuronsID.length; i++) {
       neurons[inputNeuronsID[i]].value = input[i];
       neurons[inputNeuronsID[i]].forward();
@@ -159,11 +158,17 @@ class NeuralNetwork {
     return error;
   }
 
-  void backward(List<double> expectedOutput, int x) {
+  List<double> errorStore = []; // Not Efficient
+  int errorCount = 0;
+  void backward(List<double> expectedOutput) {
     List<double> errors = calcError(expectedOutput);
+    errorStore.add(errors.reduce((a, b) => a + b) / errors.length);
+    errorCount += 1;
 
-    double avgError = errors.reduce((a, b) => a + b) / errors.length;
-    errorTemp.add(avgError);
+    if (errorCount % 3000 == 0) {
+      print("Error ${errorStore.reduce((a, b) => a + b) / errorStore.length}");
+      errorStore = [];
+    }
 
     for (int i = 0; i < outputNeuronsID.length; i++) {
       neurons[outputNeuronsID[i]].error = errors[i];
@@ -183,9 +188,10 @@ class NeuralNetwork {
       for (int j = 0; j < trainX.length; j += batchSize) {
         List<List<double>> batchX = trainX.sublist(j, j + batchSize);
         List<List<double>> batchY = trainY.sublist(j, j + batchSize);
+
         for (int k = 0; k < batchX.length; k++) {
           forward(batchX[k]);
-          backward(batchY[k], j);
+          backward(batchY[k]);
         }
       }
 
@@ -203,107 +209,61 @@ class NeuralNetwork {
 File file1 = File("lib/NN1.txt");
 File file2 = File("lib/NN2.txt");
 
-// void main() {
-//   List<List<double>> trainX = [
-//     [0, 0],
-//     [0, 1],
-//     [1, 0],
-//     [1, 1]
-//   ];
-//   List<List<double>> trainY = [
-//     [0],
-//     [1],
-//     [1],
-//     [1]
-//   ];
-
-//   // Testing if simple perceptron can predict sum of 2 inputs
-//   var a = NeuralNetwork(
-//       nodes: [
-//         2,
-//         2,
-//         1
-//       ],
-//       connections: [],
-//       activationFunctions: [
-//         Activation().relu,
-//         Activation().relu,
-//       ],
-//       errorFx: Error().meanSquareError,
-//       fullyConnected: true,
-//       learningRate: 0.01);
-
-//   a.train(
-//       trainX: trainX, trainY: trainX, epochs: 100, batchSize: 1, file: file1);
-//   // -----------------------------------------------------------------------------------------------------------
-//   var b = NeuralNetwork(
-//       nodes: [
-//         2,
-//         16,
-//         16,
-//         1
-//       ],
-//       connections: [],
-//       activationFunctions: [
-//         Activation().relu,
-//         Activation().relu,
-//         Activation().relu,
-//       ],
-//       errorFx: Error().meanSquareError,
-//       fullyConnected: true,
-//       learningRate: 0.01);
-
-//   b.train(
-//       trainX: trainX, trainY: trainX, epochs: 100, batchSize: 1, file: file2);
-// }
-
 void main() {
   List<List<double>> data = [];
-  List<List<double>> trainX = [
-    [3, 4]
-  ];
-  List<List<double>> trainY = [
-    [7]
-  ];
+  // List<List<double>> trainX = [
+  //   [3, 4],
+  //   [7, 14],
+  //   [8, 1],
+  //   [3, 3],
+  //   [20, 12],
+  //   [5, 6]
+  // ];
+  // List<List<double>> trainY = [
+  //   [7],
+  //   [21],
+  //   [9],
+  //   [6],
+  //   [32],
+  //   [11]
+  // ];
 
-  // for (double i = 0; i <= 20; i += 1) {
-  //   data.add([i.toDouble(), (i).toDouble()]);
-  // }
+  List<List<double>> trainX = [];
+  List<List<double>> trainY = [];
 
-  // // Shuffling the data
-  // data.shuffle();
+  for (double i = 0; i <= 30; i += 0.01) {
+    data.add([i.toDouble(), (i * i + 3 * i + 1).toDouble()]);
+  }
 
-  // print(data);
+  // Shuffling the data
+  data.shuffle();
 
-  // for (int i = 0; i < data.length; i++) {
-  //   trainX.add([data[i][0]]);
-  //   trainY.add([data[i][1]]);
-  // }
+  for (int i = 0; i < data.length; i++) {
+    trainX.add([data[i][0]]);
+    trainY.add([data[i][1]]);
+  }
 
-  // Testing if simple perceptron can predict sum of 2 inputs
   var a = NeuralNetwork(
       nodes: [
-        2,
+        1,
+        8,
         1
       ],
       connections: [],
       activationFunctions: [
         // Activation().relu,
-        // Activation().relu,
+        Activation().relu,
         Activation().linear,
       ],
       errorFx: Error().meanSquareError,
       fullyConnected: true,
-      learningRate: 0.01);
+      learningRate: 0.001);
 
-  for (int i = 0; i <= 20; i++) {
+  for (int i = 0; i <= 10; i++) {
     print("\nEpoch $i Output ${a.forward([3.0, 4.0])}");
-    a.train(
-        trainX: trainX, trainY: trainX, epochs: 1, batchSize: 1, file: file1);
-
     a.printWeights();
+
+    a.train(
+        trainX: trainX, trainY: trainY, epochs: 1, batchSize: 1, file: file1);
   }
 }
-
-
-// TODO: Dry Run [3, 4] --> 7 With given weights

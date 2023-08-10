@@ -13,7 +13,8 @@ List<double> randomInit(List<int> shape) {
     // if (rng.nextInt(2) == 0) {
     //   temp *= -1;
     // }
-    result.add(temp);
+    // result.add(temp);
+    result.add(0.5);
   }
 
   return result;
@@ -31,7 +32,7 @@ class Neuron {
 
   List<Neuron> backwardConnections;
   late List<double> backwardWeights = randomInit([backwardNodes]);
-  double backwardBias = 0;
+  double neuronBias = 0;
 
   List<Neuron> forwardConnections;
   Function activation;
@@ -57,9 +58,9 @@ class Neuron {
     if (!isInput) {
       value = 0;
       for (int i = 0; i < backwardConnections.length; i++) {
-        value +=
-            backwardConnections[i].value * backwardWeights[i] + backwardBias;
+        value += backwardConnections[i].value * backwardWeights[i];
       }
+      value += neuronBias;
 
       valueBeforeActivation = value;
       value = activation(value);
@@ -92,7 +93,7 @@ class Neuron {
     }
 
     // Updating bias with derivative of error
-    backwardBias -= dEdh * learningRate;
+    neuronBias -= dEdh * learningRate;
 
     // Calculate derivative of error with respect to backward neurons - passed to them for backpropagation
     for (int i = 0; i < backwardWeights.length; i++) {
